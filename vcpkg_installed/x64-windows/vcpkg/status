@@ -20,5 +20,14 @@ Architecture: x64-windows
 Multi-Arch: same
 Abi: c1cdc82c63116b07b4024d683e0352979af27cb1650cb5f431b809fb975c17cc
 Description: {fmt} is an open-source formatting library providing a fast and safe alternative to C stdio and C++ iostreams.
+Status: purge ok not-installed
+
+Package: ftxui
+Version: 7.0.0
+Depends: vcpkg-cmake, vcpkg-cmake-config
+Architecture: x64-windows
+Multi-Arch: same
+Abi: 0856d05003d4c19e6f7b43065555a17fe22084cbbf22d6aa523c1a1cdd66c8cf
+Description: C++ Functional Terminal User Interface
 Status: install ok installed
 

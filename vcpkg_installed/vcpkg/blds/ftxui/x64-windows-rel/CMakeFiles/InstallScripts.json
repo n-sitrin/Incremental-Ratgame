@@ -1,0 +1,9 @@
+{
+	"InstallScripts" : 
+	[
+		"C:/Users/noah.sitrin/source/repos/Incremental Ratgame/vcpkg_installed/vcpkg/blds/ftxui/x64-windows-rel/cmake_install.cmake",
+		"C:/Users/noah.sitrin/source/repos/Incremental Ratgame/vcpkg_installed/vcpkg/blds/ftxui/x64-windows-rel/examples/cmake_install.cmake",
+		"C:/Users/noah.sitrin/source/repos/Incremental Ratgame/vcpkg_installed/vcpkg/blds/ftxui/x64-windows-rel/doc/cmake_install.cmake"
+	],
+	"Parallel" : false
+}

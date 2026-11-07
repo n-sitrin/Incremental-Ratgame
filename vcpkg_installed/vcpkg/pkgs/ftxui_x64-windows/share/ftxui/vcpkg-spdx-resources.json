@@ -1,0 +1,19 @@
+{
+  "packages": [
+{
+  "SPDXID" : "SPDXRef-resource-0",
+  "checksums" : 
+  [
+    {
+      "algorithm" : "SHA512",
+      "checksumValue" : "923ed118ce0e6bfe88a672ba0220ac2e6cf3541a26a06f826a85bc1e763feebf8e4bc64033ccb350eb4eb6cb149bcd5bb57673a5a223ec2c197399f77cbbfc44"
+    }
+  ],
+  "copyrightText" : "NOASSERTION",
+  "downloadLocation" : "git+https://github.com/ArthurSonzogni/FTXUI@v7.0.0",
+  "licenseConcluded" : "NOASSERTION",
+  "licenseDeclared" : "NOASSERTION",
+  "name" : "ArthurSonzogni/FTXUI"
+}
+  ]
+}
