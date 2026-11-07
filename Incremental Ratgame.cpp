@@ -3,9 +3,12 @@
 
 #include <iostream>
 #include <conio.h>
+#include <fmt/core.h>
 
 int main()
 {
+	fmt::print("Hello World!\n");
+
 	int genCount = 0;
 	int genMult = 10; 
 	long currentCurds = 0;
