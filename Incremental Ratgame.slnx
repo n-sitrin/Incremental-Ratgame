@@ -1,0 +1,8 @@
+<Solution>
+  <Configurations>
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="../IncrementalSketchpad/IncrementalSketchpad.vcxproj" Id="38a16a86-7968-4286-a134-2ab72820b7b4" />
+  <Project Path="Incremental Ratgame.vcxproj" Id="8aeaab75-35d2-4d64-a7d8-d55f6dc4f504" />
+</Solution>
