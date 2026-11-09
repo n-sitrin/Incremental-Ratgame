@@ -13,30 +13,39 @@ int main()
 	long displayCurds = 0;
 	long curdsPerSecond = 0;
 	int factoryCount = 0;
-	int factoryCost = 10;
+	int factoryCost = 20;
+	int factoryProdRate = 2;
 	int curdsPerClick = 1;
 	bool running = 1;
 	bool hasStarted = 0;
 
+
 	//FTXUI setup
 	ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
 
+	//button prototype
+	auto curdButton = ftxui::Button("Click 4 Curd", [&] { currentCurds++; });
+
 	//display persistent elements on screen
-	ftxui::Component renderer = ftxui::Renderer([&] { //lambda?
+	ftxui::Component renderer = ftxui::Renderer(curdButton, [&] { //lambda?
 		return ftxui::vbox({
 			ftxui::text("Curds: " + std::to_string(displayCurds) + "\n") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold,
 			ftxui::text("Factories: " + std::to_string(factoryCount) + " (cost: " + std::to_string(factoryCost) + ")") | ftxui::color(ftxui::Color::Red),
 			ftxui::separator(),
-			ftxui::text("press space to make a cheese curd\npress b to buy a factory\npress q to quit") | ftxui::dim,
+			curdButton -> Render(),
+			ftxui::separator(),
+			ftxui::text("press b to buy a factory\npress q to quit") | ftxui::dim,
 			}) | ftxui::border;
 		});
 
+	
+
 	//handle keyboard input
 	ftxui::Component app = ftxui::CatchEvent(renderer, [&](ftxui::Event event) { //lambda?
-		if (event == ftxui::Event::Character(' ')) {
+		/*if (event == ftxui::Event::Character(' ')) {
 			currentCurds+= curdsPerClick;
 			return true;
-		}
+		}*/
 		if (event == ftxui::Event::Character('q')) {
 			running = 0;
 			return true;
@@ -52,6 +61,8 @@ int main()
 		return false;
 		});
 
+	
+
 	//loop contains above functions, lets me run all their logic elsewhere
 	//this doesn't actually "loop" in the C++ sense
 	ftxui::Loop loop(&screen, app);
@@ -60,7 +71,7 @@ int main()
 
 	while (running == 1) { //MAIN GAME LOOP
 
-		curdsPerSecond = (factoryCount * 10);
+		curdsPerSecond = (factoryCount * factoryProdRate);
 		
 		auto now = std::chrono::steady_clock::now(); //take a timestamp
 		double elapsedSeconds = std::chrono::duration<double>(now - lastTime).count(); //subtract time stored from time now, output seconds
