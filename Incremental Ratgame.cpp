@@ -16,23 +16,21 @@ int main()
 
 	class Generator {
 		std::string name;
-		int count = 0;
-		int initialCost = 10;
-		int scaledCost = initialCost;
-		double costScalar = 1.07;
-		int prodRate = 2;
+		int count = 0, initialCost, scaledCost, prodRate;
+		double costScalar;
 
 	public:
 
 		Generator(std::string n, int ic, double s, int p) {
 			name = n;
 			initialCost = ic;
+			scaledCost = initialCost;
 			costScalar = s;
 			prodRate = p;
 		}
 		
 		ftxui::Element displayInfo() const { //const means this never writes to the members, only reads
-			return ftxui::text(name + "Count: " + std::to_string(count) + " (cost : " + std::to_string(scaledCost) + ")") | ftxui::color(ftxui::Color::LightYellow3);
+			return ftxui::text(name + " Count: " + std::to_string(count) + " (cost : " + std::to_string(scaledCost) + ")") | ftxui::color(ftxui::Color::LightYellow3);
 		}
 
 		double getCPS() const {
@@ -57,14 +55,13 @@ int main()
 	//FTXUI setup
 	ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
 
-	//button 
 	auto curdButton = ftxui::Button("Click for a cheese curd", [&] { currentCurds++; });
 
 	//display persistent elements on screen
 	ftxui::Component renderer = ftxui::Renderer(curdButton, [&] { //lambda?
 		return ftxui::vbox({
 			ftxui::text("Curds: " + std::to_string(displayCurds) + "\n") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold,
-			gen1.displayInfo(),
+			gen1.displayInfo(), //maybe this could be a loop too
 			gen2.displayInfo(),
 			gen3.displayInfo(),
 			gen4.displayInfo(),
@@ -81,6 +78,7 @@ int main()
 			running = 0;
 			return true;
 		}
+		//these have the same shape... how could this be a loop?
 		if (event == ftxui::Event::Character('z')) {
 			gen1.increment(currentCurds);
 			return true;
