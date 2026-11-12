@@ -30,13 +30,15 @@ int main()
 		}
 		
 		ftxui::Element displayInfo() const { //const means this never writes to the members, only reads
-			return ftxui::text(
-				name + 
-				" Count: " + std::to_string(count) + 
-				" (Cost: " + std::to_string(scaledCost) + 
-				") Indiv. CPS: " + std::to_string(prodRate) +
-				" Upgrade Mult: x" + std::format("{:.1f}", upgradeScalar)
-			) | ftxui::color(ftxui::Color::LightYellow3);
+			return ftxui::window(
+				ftxui::text(name) |ftxui::bold, 
+				ftxui::vbox({
+					ftxui::text("Count: " + std::to_string(count)),
+					ftxui::text("Cost: " + std::to_string(scaledCost)),
+					ftxui::text("Indiv. CPS: " + std::to_string(prodRate)),
+					ftxui::text("Upgrade Mult: x" + std::format("{:.1f}", upgradeScalar)),
+					}
+			)) | ftxui::color(ftxui::Color::LightYellow3);
 		}
 		std::string getName() {
 			return name;
@@ -72,24 +74,26 @@ int main()
 	//Generator gen6("Industrial Plants", 10000, 1.07, 1000, 9);
 	//Generator gen7("Cheese Caves", 10000, 1.07, 1000, 9);
 
-	//FTXUI setup
+	//FTXUI setup, screen as persistent
 	ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
 
 	auto curdButton = ftxui::Button("click for a cheese curd", [&] { currentCurds++; });
 
-	//display persistent elements on screen
-	ftxui::Component renderer = ftxui::Renderer(curdButton, [&] { //lambda?
+	//display elements
+	ftxui::Component renderer = ftxui::Renderer(curdButton, [&] {
 		return ftxui::vbox({
 			ftxui::text("Current Curds: " + std::to_string(displayCurds) + "\n") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold,
-			ftxui::text("Total CPS: " + std::to_string(curdsPerSecond)),
+			ftxui::text("Global CPS: " + std::to_string(curdsPerSecond)),
 			ftxui::separator(),
-			gen1.displayInfo(), //maybe this could be a loop too
-			gen2.displayInfo(),
-			gen3.displayInfo(),
-			gen4.displayInfo(),
-			//gen5.displayInfo(),
-			//gen6.displayInfo(),
-			//gen7.displayInfo(),
+			ftxui::hbox({
+				gen1.displayInfo(), //maybe this could be a loop too
+				gen2.displayInfo(),
+				gen3.displayInfo(),
+				gen4.displayInfo(),
+				//gen5.displayInfo(),
+				//gen6.displayInfo(),
+				//gen7.displayInfo(),
+			}),
 			ftxui::separator(),
 			curdButton -> Render(),
 			ftxui::separator(),
