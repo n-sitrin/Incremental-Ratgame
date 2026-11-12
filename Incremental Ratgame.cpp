@@ -16,10 +16,10 @@ int main()
 		std::string name, key, upgradeKey;
 		int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 1, upgradeThreshCurrent;
 		double costScalar, upgradeScalar = 1.0;
+		ftxui::Color windowColor;
 
 	public:
-
-		Generator(std::string n, int ic, double s, int p, int uc, std::string k, std::string uk) {
+		Generator(std::string n, int ic, double s, int p, int uc, std::string k, std::string uk, ftxui::Color cl) {
 			name = n;
 			initialCost = ic;
 			scaledCost = initialCost;
@@ -29,6 +29,7 @@ int main()
 			upgradeThreshCurrent = upgradeThreshBase;
 			key = k;
 			upgradeKey = uk;
+			windowColor = cl;
 		}
 		
 		ftxui::Element displayInfo() const { //const means this never writes to the members, only reads
@@ -37,16 +38,13 @@ int main()
 				ftxui::vbox({
 					ftxui::text("Count: " + std::to_string(count)),
 					ftxui::text("Cost: " + std::to_string(scaledCost)),
-					ftxui::text("Indiv. CPS: " + std::to_string(prodRate)),
-					ftxui::text("Upgrade Cost: " + std::to_string(upgradeCost)),
-					ftxui::text("Upgrade Mult: x" + std::format("{:.1f}", upgradeScalar)),
+					ftxui::text("CPS each: " + std::to_string(prodRate)),
+					ftxui::text("Upgrd Cost: " + std::to_string(upgradeCost)),
+					ftxui::text("Upgrd Mult: x" + std::format("{:.1f}", upgradeScalar)),
 					ftxui::text(key + " to buy"), //can't concatenate char + string
 					ftxui::text(upgradeKey + " to upgrade"),
-					})) | ftxui::color(ftxui::Color::LightYellow3);
+					})) | ftxui::color(windowColor);
 			 
-		}
-		std::string getName() {
-			return name;
 		}
 
 		double getCPS() const {
@@ -78,12 +76,12 @@ int main()
 		}
 	};
 
-	Generator gen1("Rats", 10, 1.07, 2, 9, "z", "a");
-	Generator gen2("Cows", 100, 1.07, 10, 9, "x", "s");
-	Generator gen3("Mongers", 1000, 1.07, 100, 9, "c", "d");
-	Generator gen4("Dairy Farms", 10000, 1.07, 1000, 9, "v", "f");
-	//Generator gen6("Industrial Plants", 10000, 1.07, 1000, 9);
-	//Generator gen7("Cheese Caves", 10000, 1.07, 1000, 9);
+	Generator gen1("Rats",				10,		1.07, 2,	9, "z", "a", ftxui::Color::White);
+	Generator gen2("Mongers",			100,	1.07, 10,	9, "x", "s", ftxui::Color::DarkOrange);
+	Generator gen3("Dairy Farms",		1000,	1.07, 100,	9, "c", "d", ftxui::Color::Yellow);
+	Generator gen4("Industrial Plants",	10000,	1.07, 1000,	9, "v", "f", ftxui::Color::PaleTurquoise1);
+	Generator gen5("Cheese Caves",		10000,	1.07, 1000, 9, "b", "g", ftxui::Color::BlueLight);
+	Generator gen6("Fondue Fountains",	10000,	1.07, 1000, 9, "n", "h", ftxui::Color::GreenLight);
 
 	//FTXUI setup, screen as persistent
 	ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
@@ -102,9 +100,8 @@ int main()
 				gen2.displayInfo(),
 				gen3.displayInfo(),
 				gen4.displayInfo(),
-				//gen5.displayInfo(),
-				//gen6.displayInfo(),
-				//gen7.displayInfo(),
+				gen5.displayInfo(),
+				gen6.displayInfo(),
 			}),
 			ftxui::separator(),
 			curdButton -> Render(),
@@ -113,21 +110,25 @@ int main()
 		});
 
 	//handle keyboard input
-	ftxui::Component app = ftxui::CatchEvent(renderer, [&](ftxui::Event event) { //lambda?
+	ftxui::Component app = ftxui::CatchEvent(renderer, [&](ftxui::Event event) {
 		if (event == ftxui::Event::Character('0')) {
 			running = 0;
 			return true;
 		}
-		//these have the same shape... how could this be a loop?
+		//could this be a loop?
 		gen1.tryPurchase(event, currentCurds);
 		gen2.tryPurchase(event, currentCurds);
 		gen3.tryPurchase(event, currentCurds);
 		gen4.tryPurchase(event, currentCurds);
+		gen5.tryPurchase(event, currentCurds);
+		gen6.tryPurchase(event, currentCurds);
 
 		gen1.tryUpgrade(event, currentCurds);
 		gen2.tryUpgrade(event, currentCurds);
 		gen3.tryUpgrade(event, currentCurds);
 		gen4.tryUpgrade(event, currentCurds);
+		gen5.tryUpgrade(event, currentCurds);
+		gen6.tryUpgrade(event, currentCurds);
 		
 		return false;
 		});
@@ -138,7 +139,7 @@ int main()
 
 	while (running == 1) { //MAIN GAME LOOP
 
-		curdsPerSecond = gen1.getCPS() + gen2.getCPS() + gen3.getCPS() + gen4.getCPS();
+		curdsPerSecond = gen1.getCPS() + gen2.getCPS() + gen3.getCPS() + gen4.getCPS() + gen5.getCPS() + gen6.getCPS();
 		
 		auto now = std::chrono::steady_clock::now(); //finds time interval, used for calculating generated curds
 		double elapsedSeconds = std::chrono::duration<double>(now - lastTime).count();
