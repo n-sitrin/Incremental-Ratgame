@@ -3,7 +3,7 @@
 #include <string>
 #include <thread>
 #include <chrono>
-#include <ftxui/ftxui.hpp> //this includes everything. consider reducing later if there are unneeded pkgs
+#include <ftxui/ftxui.hpp>
 
 int main()
 {
@@ -14,7 +14,7 @@ int main()
 
 	class Generator {
 		std::string name;
-		int count = 0, initialCost, scaledCost, prodRate, upgradeCost;
+		int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 50, upgradeThreshCurrent;
 		double costScalar, upgradeScalar = 1.0;
 
 	public:
@@ -26,6 +26,7 @@ int main()
 			costScalar = s;
 			prodRate = p;
 			upgradeCost = uc;
+			upgradeThreshCurrent = upgradeThreshBase;
 		}
 		
 		ftxui::Element displayInfo() const { //const means this never writes to the members, only reads
@@ -55,9 +56,10 @@ int main()
 		}
 
 		void upgrade(double &currentCurds) {
-			if (currentCurds >= upgradeCost) {
+			if (currentCurds >= upgradeCost && count >= upgradeThreshCurrent) {
 				currentCurds -= upgradeCost;
 				upgradeScalar += 0.5;
+				upgradeThreshCurrent += upgradeThreshBase;
 			}
 		}
 	};
@@ -146,8 +148,7 @@ int main()
 		return false;
 		});
 
-	//contains above functions, lets me run all their logic elsewhere
-	ftxui::Loop loop(&screen, app);
+	ftxui::Loop loop(&screen, app); //update screen, check manual inputs
 
 	auto lastTime = std::chrono::steady_clock::now();
 
@@ -155,16 +156,15 @@ int main()
 
 		curdsPerSecond = gen1.getCPS() + gen2.getCPS() + gen3.getCPS() + gen4.getCPS();
 		
-		auto now = std::chrono::steady_clock::now(); //take a timestamp
-		double elapsedSeconds = std::chrono::duration<double>(now - lastTime).count(); //subtract time stored from time now, output seconds
-		lastTime = now; //store a timestamp for the next subtraction, which happens after the wait in this loop
+		auto now = std::chrono::steady_clock::now(); //finds time interval, used for calculating generated curds
+		double elapsedSeconds = std::chrono::duration<double>(now - lastTime).count();
+		lastTime = now;
 
 		currentCurds = currentCurds + (curdsPerSecond * elapsedSeconds);
 		displayCurds = currentCurds;
 		
-		screen.PostEvent(ftxui::Event::Custom); //push an event into the queue each frame. 
-		//This is necessary when I have variables updating autonomously that I want displayed. "app" otherwise only checks if there are pending keyboard events.
-		loop.RunOnce(); //do one pass of all my FTXUI functions. Doesn't hijack the program by waiting. If there are no pending inputs, moves on.
+		screen.PostEvent(ftxui::Event::Custom); //push autonomous updates to screen
+		loop.RunOnce(); //non-blocking
 		
 		std::this_thread::sleep_for(std::chrono::milliseconds(16));	//60 "fps"
 	}
