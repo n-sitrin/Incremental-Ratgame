@@ -10,7 +10,7 @@ int main()
 	double currentCurds = 0, producedCurds = 0;
 	long displayCurds = 0, curdsPerSecond = 0;
 	int curdsPerClick = 1;
-	bool running = 1, hasStarted = 0;
+	bool running = 1;
 
 	class Generator {
 		std::string name, key, upgradeKey;
@@ -75,13 +75,13 @@ int main()
 			}
 		}
 	};
-
-	Generator gen1("Rats",				10,		1.07, 2,	9, "z", "a", ftxui::Color::White);
-	Generator gen2("Mongers",			100,	1.07, 10,	9, "x", "s", ftxui::Color::DarkOrange);
-	Generator gen3("Dairy Farms",		1000,	1.07, 100,	9, "c", "d", ftxui::Color::Yellow);
-	Generator gen4("Industrial Plants",	10000,	1.07, 1000,	9, "v", "f", ftxui::Color::PaleTurquoise1);
-	Generator gen5("Cheese Caves",		10000,	1.07, 1000, 9, "b", "g", ftxui::Color::BlueLight);
-	Generator gen6("Fondue Fountains",	10000,	1.07, 1000, 9, "n", "h", ftxui::Color::GreenLight);
+	//				name				cost	cScalar	CPS		uCost
+	Generator gen1("Rats",				10,		1.07,	2,		9,		"z", "a", ftxui::Color::White);
+	Generator gen2("Mongers",			100,	1.07,	10,		9,		"x", "s", ftxui::Color::DarkOrange);
+	Generator gen3("Dairy Farms",		1000,	1.07,	100,	9,		"c", "d", ftxui::Color::Yellow);
+	Generator gen4("Industrial Plants",	10000,	1.07,	1000,	9,		"v", "f", ftxui::Color::PaleTurquoise1);
+	Generator gen5("Cheese Caves",		10000,	1.07,	1000,	9,		"b", "g", ftxui::Color::BlueLight);
+	Generator gen6("Fondue Fountains",	10000,	1.07,	1000,	9,		"n", "h", ftxui::Color::GreenLight);
 
 	//FTXUI setup, screen as persistent
 	ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
@@ -91,9 +91,25 @@ int main()
 	//display elements
 	ftxui::Component renderer = ftxui::Renderer(curdButton, [&] {
 		return ftxui::vbox({
-			ftxui::text("Current Curds: " + std::to_string(displayCurds) + "\n") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold,
-			ftxui::text("Produced Curds: " + std::to_string(producedCurds) + "\n") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold, //DEBUG hide in release version
-			ftxui::text("Global CPS: " + std::to_string(curdsPerSecond)),
+			ftxui::text("Message Board Goes Here") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold,
+				ftxui::separator(),
+			ftxui::hbox({
+				ftxui::vbox({
+					ftxui::text("Current Curds: " + std::to_string(displayCurds)) | ftxui::color(ftxui::Color::Yellow) | ftxui::bold,
+					ftxui::text("Produced Curds: " + std::to_string(producedCurds) + "\n") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold, //DEBUG hide in release version
+					ftxui::text("Global CPS: " + std::to_string(curdsPerSecond)),
+				}),
+				ftxui::filler(),
+				curdButton->Render(),
+				ftxui::window(
+					ftxui::text("Per Click") | ftxui::bold,
+					ftxui::vbox({
+						ftxui::text("curds generated"),
+						ftxui::text("Upgrade Cost"),
+						ftxui::text("Buy Upgrade Button Goes Here"),
+					})
+				)
+			}),
 			ftxui::separator(),
 			ftxui::hbox({
 				gen1.displayInfo(), //maybe this could be a loop too
@@ -104,7 +120,7 @@ int main()
 				gen6.displayInfo(),
 			}),
 			ftxui::separator(),
-			curdButton -> Render(),
+			ftxui::text("Accumulator Goes Here") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold,
 			ftxui::separator(),
 			}) | ftxui::border;
 		});
