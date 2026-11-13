@@ -7,9 +7,9 @@
 
 int main()
 {
-	double currentCurds = 0, producedCurds = 0;
-	long displayCurds = 0, curdsPerSecond = 0;
-	int curdsPerClick = 1;
+	double currentCurds = 0, producedCurds = 0, clickCostScalar = 1.07;
+	long displayCurds = 0, curdsPerSecond = 0, clickUpgradeCost = 10;
+	int curdsPerClick = 1, clickUpgradeCount = 0;
 	bool running = 1;
 
 	class Generator {
@@ -43,12 +43,9 @@ int main()
 					ftxui::text("CPS each: " + std::to_string(prodRate)),
 					ftxui::text("Upgrd Cost: " + std::to_string(upgradeCost)),
 					ftxui::text("Upgrd Mult: x" + std::format("{:.1f}", upgradeScalar)),
-					ftxui::text(key + " to buy"), //can't concatenate char + string
-					ftxui::text(upgradeKey + " to upgrade"),
 					buyButton->Render(),
 					upgradeButton->Render(),
 					})) | ftxui::color(windowColor);
-			 
 		}
 
 		double getCPS() const {
@@ -70,30 +67,6 @@ int main()
 				upgradeThreshCurrent += upgradeThreshBase;
 			}
 		}
-
-		//UNUSED
-		bool tryPurchase(ftxui::Event& event, double& currentCurds) {
-			if (event == ftxui::Event::Character(key[0])) {
-				if (currentCurds >= scaledCost) {
-					currentCurds -= scaledCost;
-					count++;
-					scaledCost = initialCost * (costScalar * (count + 1));
-				}
-				return true;
-			}
-		}
-		//UNUSED
-		bool tryUpgrade(ftxui::Event& event, double& currentCurds) {
-			if (event == ftxui::Event::Character(upgradeKey[0])) {
-				if (currentCurds >= upgradeCost && count >= upgradeThreshCurrent) {
-					currentCurds -= upgradeCost;
-					upgradeScalar += 0.5; //needs tuning
-					upgradeCost = upgradeCost * 2; //needs tuning
-					upgradeThreshCurrent += upgradeThreshBase;
-				}
-				return true;
-			}
-		}
 	};
 	//				name				cost	cScalar	CPS		uCost
 	Generator gen1("Rats",				10,		1.07,	2,		9,		"z", "a", ftxui::Color::White, currentCurds);
@@ -106,9 +79,19 @@ int main()
 	//FTXUI setup, screen as persistent
 	ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
 
-	auto curdButton = ftxui::Button("click for a cheese curd", [&] { currentCurds++; producedCurds++; });
+	//click button functions
+	auto curdButton = ftxui::Button("click for a cheese curd", [&] { currentCurds += curdsPerClick; producedCurds += curdsPerClick; });
+	auto clickUpgradeButton = ftxui::Button("Upgrade", [&] { 
+		if (currentCurds >= clickUpgradeCost) {
+			currentCurds -= clickUpgradeCost;
+			clickUpgradeCount++;
+			curdsPerClick++;
+			clickUpgradeCost = clickUpgradeCost * (clickCostScalar * (clickUpgradeCount + 1));
+		}
+		});
 	auto allButtons = ftxui::Container::Horizontal({
 		curdButton,
+		clickUpgradeButton,
 		gen1.getComponent(),
 		gen2.getComponent(),
 		gen3.getComponent(),
@@ -133,15 +116,15 @@ int main()
 				ftxui::window(
 					ftxui::text("Per Click") | ftxui::bold,
 					ftxui::vbox({
-						ftxui::text("curds generated"),
-						ftxui::text("Upgrade Cost"),
-						ftxui::text("Buy Upgrade Button Goes Here"),
+						ftxui::text("curds produced: " + std::to_string(curdsPerClick)),
+						ftxui::text("Upgrade Cost" + std::to_string(clickUpgradeCost)),
+						clickUpgradeButton->Render(),
 					})
 				)
 			}),
 			ftxui::separator(),
 			ftxui::hbox({
-				gen1.displayInfo(), //maybe this could be a loop too
+				gen1.displayInfo(), //maybe this could be a loop
 				gen2.displayInfo(),
 				gen3.displayInfo(),
 				gen4.displayInfo(),
@@ -151,30 +134,16 @@ int main()
 			ftxui::separator(),
 			ftxui::text("Accumulator Goes Here") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold,
 			ftxui::separator(),
+			ftxui::text("press q to quit") | ftxui::color(ftxui::Color::Yellow) | ftxui::dim,
 			}) | ftxui::border;
 		});
 
 	//handle keyboard input
 	ftxui::Component app = ftxui::CatchEvent(renderer, [&](ftxui::Event event) {
-		if (event == ftxui::Event::Character('0')) {
+		if (event == ftxui::Event::Character('q')) {
 			running = 0;
 			return true;
 		}
-		//could this be a loop?
-		gen1.tryPurchase(event, currentCurds);
-		gen2.tryPurchase(event, currentCurds);
-		gen3.tryPurchase(event, currentCurds);
-		gen4.tryPurchase(event, currentCurds);
-		gen5.tryPurchase(event, currentCurds);
-		gen6.tryPurchase(event, currentCurds);
-
-		gen1.tryUpgrade(event, currentCurds);
-		gen2.tryUpgrade(event, currentCurds);
-		gen3.tryUpgrade(event, currentCurds);
-		gen4.tryUpgrade(event, currentCurds);
-		gen5.tryUpgrade(event, currentCurds);
-		gen6.tryUpgrade(event, currentCurds);
-		
 		return false;
 		});
 
