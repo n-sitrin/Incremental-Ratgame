@@ -16,23 +16,25 @@ int main()
 		std::string name, key, upgradeKey;
 		int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 1, upgradeThreshCurrent;
 		double costScalar, upgradeScalar = 1.0;
+		double& curds;
 		ftxui::Color windowColor;
+		ftxui::Component buyButton;
+		ftxui::Component upgradeButton;
 
 	public:
-		Generator(std::string n, int ic, double s, int p, int uc, std::string k, std::string uk, ftxui::Color cl) {
-			name = n;
-			initialCost = ic;
-			scaledCost = initialCost;
-			costScalar = s;
-			prodRate = p;
-			upgradeCost = uc;
-			upgradeThreshCurrent = upgradeThreshBase;
-			key = k;
-			upgradeKey = uk;
-			windowColor = cl;
+		Generator(std::string n, int ic, double s, int p, int uc, std::string k, std::string uk, ftxui::Color cl, double& cRef) 
+			: name(n), initialCost(ic), scaledCost(initialCost), costScalar(s), prodRate(p), upgradeCost(uc),
+			upgradeThreshCurrent(upgradeThreshBase), key(k), upgradeKey(uk), windowColor(cl), curds(cRef)
+		{
+			buyButton = ftxui::Button("Buy", [this] { increment(curds); });
+			upgradeButton = ftxui::Button("Upgrade", [this] { upgrade(curds); });
 		}
 		
-		ftxui::Element displayInfo() const { //const means this never writes to the members, only reads
+		ftxui::Component getComponent() {
+			return ftxui::Container::Vertical({ buyButton, upgradeButton }); //group object's buttons for component tree
+		}
+
+		ftxui::Element displayInfo() const { 
 			return ftxui::window(
 				ftxui::text(name) | ftxui::bold,
 				ftxui::vbox({
@@ -43,6 +45,8 @@ int main()
 					ftxui::text("Upgrd Mult: x" + std::format("{:.1f}", upgradeScalar)),
 					ftxui::text(key + " to buy"), //can't concatenate char + string
 					ftxui::text(upgradeKey + " to upgrade"),
+					buyButton->Render(),
+					upgradeButton->Render(),
 					})) | ftxui::color(windowColor);
 			 
 		}
@@ -51,7 +55,23 @@ int main()
 			double CPS = (count * prodRate) * upgradeScalar;
 			return CPS;
 		}
+		void increment(double& currentCurds) {
+			if (currentCurds >= scaledCost) {
+				currentCurds -= scaledCost;
+				count++;
+				scaledCost = initialCost * (costScalar * (count + 1));
+			}
+		}
+		void upgrade(double& currentCurds) {
+			if (currentCurds >= upgradeCost && count >= upgradeThreshCurrent) {
+				currentCurds -= upgradeCost;
+				upgradeScalar += 0.5; //needs tuning
+				upgradeCost = upgradeCost * 2; //needs tuning
+				upgradeThreshCurrent += upgradeThreshBase;
+			}
+		}
 
+		//UNUSED
 		bool tryPurchase(ftxui::Event& event, double& currentCurds) {
 			if (event == ftxui::Event::Character(key[0])) {
 				if (currentCurds >= scaledCost) {
@@ -62,7 +82,7 @@ int main()
 				return true;
 			}
 		}
-
+		//UNUSED
 		bool tryUpgrade(ftxui::Event& event, double& currentCurds) {
 			if (event == ftxui::Event::Character(upgradeKey[0])) {
 				if (currentCurds >= upgradeCost && count >= upgradeThreshCurrent) {
@@ -76,20 +96,29 @@ int main()
 		}
 	};
 	//				name				cost	cScalar	CPS		uCost
-	Generator gen1("Rats",				10,		1.07,	2,		9,		"z", "a", ftxui::Color::White);
-	Generator gen2("Mongers",			100,	1.07,	10,		9,		"x", "s", ftxui::Color::DarkOrange);
-	Generator gen3("Dairy Farms",		1000,	1.07,	100,	9,		"c", "d", ftxui::Color::Yellow);
-	Generator gen4("Industrial Plants",	10000,	1.07,	1000,	9,		"v", "f", ftxui::Color::PaleTurquoise1);
-	Generator gen5("Cheese Caves",		10000,	1.07,	1000,	9,		"b", "g", ftxui::Color::BlueLight);
-	Generator gen6("Fondue Fountains",	10000,	1.07,	1000,	9,		"n", "h", ftxui::Color::GreenLight);
+	Generator gen1("Rats",				10,		1.07,	2,		9,		"z", "a", ftxui::Color::White, currentCurds);
+	Generator gen2("Mongers",			100,	1.07,	10,		9,		"x", "s", ftxui::Color::DarkOrange, currentCurds);
+	Generator gen3("Dairy Farms",		1000,	1.07,	100,	9,		"c", "d", ftxui::Color::Yellow, currentCurds);
+	Generator gen4("Industrial Plants",	10000,	1.07,	1000,	9,		"v", "f", ftxui::Color::PaleTurquoise1, currentCurds);
+	Generator gen5("Cheese Caves",		10000,	1.07,	1000,	9,		"b", "g", ftxui::Color::BlueLight, currentCurds);
+	Generator gen6("Fondue Fountains",	10000,	1.07,	1000,	9,		"n", "h", ftxui::Color::GreenLight, currentCurds);
 
 	//FTXUI setup, screen as persistent
 	ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
 
 	auto curdButton = ftxui::Button("click for a cheese curd", [&] { currentCurds++; producedCurds++; });
+	auto allButtons = ftxui::Container::Horizontal({
+		curdButton,
+		gen1.getComponent(),
+		gen2.getComponent(),
+		gen3.getComponent(),
+		gen4.getComponent(),
+		gen5.getComponent(),
+		gen6.getComponent(),
+		});
 
 	//display elements
-	ftxui::Component renderer = ftxui::Renderer(curdButton, [&] {
+	ftxui::Component renderer = ftxui::Renderer(allButtons, [&] {
 		return ftxui::vbox({
 			ftxui::text("Message Board Goes Here") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold,
 				ftxui::separator(),
