@@ -5,6 +5,63 @@
 #include <chrono>
 #include <ftxui/ftxui.hpp>
 
+class Generator {
+	std::string name, key, upgradeKey;
+	int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 1, upgradeThreshCurrent;
+	double costScalar, upgradeScalar = 1.0;
+	double& curds;
+	ftxui::Color windowColor;
+	ftxui::Component buyButton;
+	ftxui::Component upgradeButton;
+
+public:
+	Generator(std::string n, int ic, double s, int p, int uc, std::string k, std::string uk, ftxui::Color cl, double& cRef)
+		: name(n), initialCost(ic), scaledCost(initialCost), costScalar(s), prodRate(p), upgradeCost(uc),
+		upgradeThreshCurrent(upgradeThreshBase), key(k), upgradeKey(uk), windowColor(cl), curds(cRef)
+	{
+		buyButton = ftxui::Button("Buy", [this] { increment(curds); });
+		upgradeButton = ftxui::Button("Upgrade", [this] { upgrade(curds); });
+	}
+
+	ftxui::Component getComponent() {
+		return ftxui::Container::Vertical({ buyButton, upgradeButton }); //group object's buttons for component tree
+	}
+
+	ftxui::Element displayInfo() const {
+		return ftxui::window(
+			ftxui::text(name) | ftxui::bold,
+			ftxui::vbox({
+				ftxui::text("Count: " + std::to_string(count)),
+				ftxui::text("Cost: " + std::to_string(scaledCost)),
+				ftxui::text("CPS each: " + std::to_string(prodRate)),
+				ftxui::text("Upgrd Cost: " + std::to_string(upgradeCost)),
+				ftxui::text("Upgrd Mult: x" + std::format("{:.1f}", upgradeScalar)),
+				buyButton->Render(),
+				upgradeButton->Render(),
+				})) | ftxui::color(windowColor);
+	}
+
+	double getCPS() const {
+		double CPS = (count * prodRate) * upgradeScalar;
+		return CPS;
+	}
+	void increment(double& currentCurds) {
+		if (currentCurds >= scaledCost) {
+			currentCurds -= scaledCost;
+			count++;
+			scaledCost = initialCost * (costScalar * (count + 1));
+		}
+	}
+	void upgrade(double& currentCurds) {
+		if (currentCurds >= upgradeCost && count >= upgradeThreshCurrent) {
+			currentCurds -= upgradeCost;
+			upgradeScalar += 0.5; //needs tuning
+			upgradeCost = upgradeCost * 2; //needs tuning
+			upgradeThreshCurrent += upgradeThreshBase;
+		}
+	}
+};
+
 int main()
 {
 	double currentCurds = 0, producedCurds = 0, clickCostScalar = 1.07;
@@ -12,62 +69,6 @@ int main()
 	int curdsPerClick = 1, clickUpgradeCount = 0;
 	bool running = 1;
 
-	class Generator {
-		std::string name, key, upgradeKey;
-		int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 1, upgradeThreshCurrent;
-		double costScalar, upgradeScalar = 1.0;
-		double& curds;
-		ftxui::Color windowColor;
-		ftxui::Component buyButton;
-		ftxui::Component upgradeButton;
-
-	public:
-		Generator(std::string n, int ic, double s, int p, int uc, std::string k, std::string uk, ftxui::Color cl, double& cRef) 
-			: name(n), initialCost(ic), scaledCost(initialCost), costScalar(s), prodRate(p), upgradeCost(uc),
-			upgradeThreshCurrent(upgradeThreshBase), key(k), upgradeKey(uk), windowColor(cl), curds(cRef)
-		{
-			buyButton = ftxui::Button("Buy", [this] { increment(curds); });
-			upgradeButton = ftxui::Button("Upgrade", [this] { upgrade(curds); });
-		}
-		
-		ftxui::Component getComponent() {
-			return ftxui::Container::Vertical({ buyButton, upgradeButton }); //group object's buttons for component tree
-		}
-
-		ftxui::Element displayInfo() const { 
-			return ftxui::window(
-				ftxui::text(name) | ftxui::bold,
-				ftxui::vbox({
-					ftxui::text("Count: " + std::to_string(count)),
-					ftxui::text("Cost: " + std::to_string(scaledCost)),
-					ftxui::text("CPS each: " + std::to_string(prodRate)),
-					ftxui::text("Upgrd Cost: " + std::to_string(upgradeCost)),
-					ftxui::text("Upgrd Mult: x" + std::format("{:.1f}", upgradeScalar)),
-					buyButton->Render(),
-					upgradeButton->Render(),
-					})) | ftxui::color(windowColor);
-		}
-
-		double getCPS() const {
-			double CPS = (count * prodRate) * upgradeScalar;
-			return CPS;
-		}
-		void increment(double& currentCurds) {
-			if (currentCurds >= scaledCost) {
-				currentCurds -= scaledCost;
-				count++;
-				scaledCost = initialCost * (costScalar * (count + 1));
-			}
-		}
-		void upgrade(double& currentCurds) {
-			if (currentCurds >= upgradeCost && count >= upgradeThreshCurrent) {
-				currentCurds -= upgradeCost;
-				upgradeScalar += 0.5; //needs tuning
-				upgradeCost = upgradeCost * 2; //needs tuning
-				upgradeThreshCurrent += upgradeThreshBase;
-			}
-		}
-	};
 	//				name				cost	cScalar	CPS		uCost
 	Generator gen1("Rats",				10,		1.07,	2,		9,		"z", "a", ftxui::Color::White, currentCurds);
 	Generator gen2("Mongers",			100,	1.07,	10,		9,		"x", "s", ftxui::Color::DarkOrange, currentCurds);
@@ -80,7 +81,7 @@ int main()
 	ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
 
 	//click button functions
-	auto curdButton = ftxui::Button("click for a cheese curd", [&] { currentCurds += curdsPerClick; producedCurds += curdsPerClick; });
+	auto curdButton = ftxui::Button("click for a cheese curd", [&] { currentCurds += curdsPerClick; producedCurds += curdsPerClick; }, ftxui::ButtonOption::Animated());
 	auto clickUpgradeButton = ftxui::Button("Upgrade", [&] { 
 		if (currentCurds >= clickUpgradeCost) {
 			currentCurds -= clickUpgradeCost;
