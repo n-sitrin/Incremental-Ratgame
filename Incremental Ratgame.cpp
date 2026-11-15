@@ -19,8 +19,8 @@ public:
 		: name(n), initialCost(ic), scaledCost(initialCost), costScalar(s), prodRate(p), upgradeCost(uc),
 		upgradeThreshCurrent(upgradeThreshBase), key(k), upgradeKey(uk), windowColor(cl), curds(cRef)
 	{
-		buyButton = ftxui::Button("BUY", [this] { increment(curds); }, ftxui::ButtonOption::Ascii());
-		upgradeButton = ftxui::Button("UPGRADE", [this] { upgrade(curds); }, ftxui::ButtonOption::Ascii());
+		buyButton = ftxui::Button("BUY", [this] { tryPurchase(curds); }, ftxui::ButtonOption::Ascii());
+		upgradeButton = ftxui::Button("UPGRADE", [this] { tryUpgrade(curds); }, ftxui::ButtonOption::Ascii());
 	}
 
 	ftxui::Component getComponent() {
@@ -45,14 +45,14 @@ public:
 		double CPS = (count * prodRate) * upgradeScalar;
 		return CPS;
 	}
-	void increment(double& currentCurds) {
+	void tryPurchase(double& currentCurds) {
 		if (currentCurds >= scaledCost) {
 			currentCurds -= scaledCost;
 			count++;
 			scaledCost = initialCost * (costScalar * (count + 1));
 		}
 	}
-	void upgrade(double& currentCurds) {
+	void tryUpgrade(double& currentCurds) {
 		if (currentCurds >= upgradeCost && count >= upgradeThreshCurrent) {
 			currentCurds -= upgradeCost;
 			upgradeScalar += 0.5; //needs tuning
@@ -63,36 +63,48 @@ public:
 };
 
 class Accumulator {
-	//private members go here
-public:
+	std::chrono::steady_clock::time_point timeStamp;
+	std::chrono::seconds thresh{ 10 }; //duration taken before granting curds
+	bool hasPurchased = 0;
+	int durationToGrant = 600; //seconds worth of generation given when thresh is reached
+	int upgradeCount = 0, upgradeLimit = 5; //needs tuning
+	double cost = 10;
 
-	void Start() {
-		//accumTimeStamp = now
+public:
+	//TODO make display function that shows what it does, how much it costs, etc based on private members
+
+	void tryPurchase(std::chrono::steady_clock::time_point now, double& currentCurds) {
+		if (hasPurchased == 0 && currentCurds >= cost) {
+			hasPurchased = 1;
+			currentCurds -= cost;
+			timeStamp = now;
+		}
 	}
 
 	void Upgrade() {
-		//if accumUpgradeCount < accumUpgradeLimit (
-			//accumTimeThresh -= (30 sec), accumCount++
+		if (upgradeCount < upgradeLimit) {
+			thresh -= std::chrono::seconds(30);
+			upgradeCount++;
+		}
 		//else (you've hit the limit) message board?
-
 	}
 
-	void Call() {
-
-		//	if (now - accumTimeStamp >= accumTimeThresh) {
-		//		"grant x curds";
-		//			accumTimeStamp = now;
-		//	}
-
+	void Call(std::chrono::steady_clock::time_point now, double& currentCurds, long& curdsPerSecond) {
+		if (hasPurchased == 1) {
+			if (now - timeStamp >= thresh) {
+				currentCurds += curdsPerSecond * durationToGrant;
+				timeStamp = now;
+			}
+		}
 	}
 };
 
 int main()
 {
-	double currentCurds = 0, producedCurds = 0, clickCostScalar = 1.07, accumulatorLimit = 300;
+	double currentCurds = 0, producedCurds = 0, clickCostScalar = 1.07;
 	long displayCurds = 0, curdsPerSecond = 0, clickUpgradeCost = 10;
-	int curdsPerClick = 1, clickUpgradeCount = 0, accumulatorUpgradeCount = 0;
-	bool running = 1, accumulatorPurchased = 0; //move private accum stuff inside class
+	int curdsPerClick = 1, clickUpgradeCount = 0;
+	bool running = 1;
 
 	//				name				cost	cScalar	CPS		uCost
 	Generator gen1("RATS",				10,		1.07,	2,		9,		"z", "a", ftxui::Color::White, currentCurds);
@@ -103,6 +115,7 @@ int main()
 	Generator gen6("FONDUE FOUNTAINS",	10000,	1.07,	1000,	9,		"n", "h", ftxui::Color::GreenLight, currentCurds);
 
 	Accumulator curdAccum({}); //most vexing parse :( interpreted as function w/o curly braces
+	auto now = std::chrono::steady_clock::now(); //finds time interval, used for calculating generated curds
 
 	//click button functions. Maybe move to class later
 	auto curdButton = ftxui::Button("CLICK for cheese curds", [&] { currentCurds += curdsPerClick; producedCurds += curdsPerClick; }, ftxui::ButtonOption::Animated());
@@ -114,7 +127,7 @@ int main()
 			clickUpgradeCost = clickUpgradeCost * (clickCostScalar * (clickUpgradeCount + 1));
 		}
 		}, ftxui::ButtonOption::Ascii());
-	auto accumulatorBuyButton = ftxui::Button("BUY", [&] { accumulatorPurchased = 1; curdAccum.Start(); }, ftxui::ButtonOption::Ascii());
+	auto accumulatorBuyButton = ftxui::Button("BUY", [&] { curdAccum.tryPurchase(now, currentCurds); }, ftxui::ButtonOption::Ascii());
 	auto accumulatorUpgradeButton = ftxui::Button("UPGRADE", [&] { curdAccum.Upgrade(); }, ftxui::ButtonOption::Ascii());
 	auto allButtons = ftxui::Container::Horizontal({
 		curdButton,
@@ -190,10 +203,10 @@ int main()
 
 		curdsPerSecond = gen1.getCPS() + gen2.getCPS() + gen3.getCPS() + gen4.getCPS() + gen5.getCPS() + gen6.getCPS();
 		
-		auto now = std::chrono::steady_clock::now(); //finds time interval, used for calculating generated curds
-		if (accumulatorPurchased == 1) {
-			
-		}
+		now = std::chrono::steady_clock::now(); //initialization moved up (used for accum)
+		//accumulator step. make sure it's non-blocking
+		curdAccum.Call(now, currentCurds, curdsPerSecond);
+
 		double elapsedSeconds = std::chrono::duration<double>(now - lastTime).count();
 		lastTime = now;
 
