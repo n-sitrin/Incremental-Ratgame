@@ -19,8 +19,8 @@ public:
 		: name(n), initialCost(ic), scaledCost(initialCost), costScalar(s), prodRate(p), upgradeCost(uc),
 		upgradeThreshCurrent(upgradeThreshBase), key(k), upgradeKey(uk), windowColor(cl), curds(cRef)
 	{
-		buyButton = ftxui::Button("Buy", [this] { increment(curds); });
-		upgradeButton = ftxui::Button("Upgrade", [this] { upgrade(curds); });
+		buyButton = ftxui::Button("BUY", [this] { increment(curds); }, ftxui::ButtonOption::Ascii());
+		upgradeButton = ftxui::Button("UPGRADE", [this] { upgrade(curds); }, ftxui::ButtonOption::Ascii());
 	}
 
 	ftxui::Component getComponent() {
@@ -62,34 +62,60 @@ public:
 	}
 };
 
+class Accumulator {
+	//private members go here
+public:
+
+	void Start() {
+		//accumTimeStamp = now
+	}
+
+	void Upgrade() {
+		//if accumUpgradeCount < accumUpgradeLimit (
+			//accumTimeThresh -= (30 sec), accumCount++
+		//else (you've hit the limit) message board?
+
+	}
+
+	void Call() {
+
+		//	if (now - accumTimeStamp >= accumTimeThresh) {
+		//		"grant x curds";
+		//			accumTimeStamp = now;
+		//	}
+
+	}
+};
+
 int main()
 {
-	double currentCurds = 0, producedCurds = 0, clickCostScalar = 1.07;
+	double currentCurds = 0, producedCurds = 0, clickCostScalar = 1.07, accumulatorLimit = 300;
 	long displayCurds = 0, curdsPerSecond = 0, clickUpgradeCost = 10;
-	int curdsPerClick = 1, clickUpgradeCount = 0;
-	bool running = 1;
+	int curdsPerClick = 1, clickUpgradeCount = 0, accumulatorUpgradeCount = 0;
+	bool running = 1, accumulatorPurchased = 0; //move private accum stuff inside class
 
 	//				name				cost	cScalar	CPS		uCost
-	Generator gen1("Rats",				10,		1.07,	2,		9,		"z", "a", ftxui::Color::White, currentCurds);
-	Generator gen2("Mongers",			100,	1.07,	10,		9,		"x", "s", ftxui::Color::DarkOrange, currentCurds);
-	Generator gen3("Dairy Farms",		1000,	1.07,	100,	9,		"c", "d", ftxui::Color::Yellow, currentCurds);
-	Generator gen4("Industrial Plants",	10000,	1.07,	1000,	9,		"v", "f", ftxui::Color::PaleTurquoise1, currentCurds);
-	Generator gen5("Cheese Caves",		10000,	1.07,	1000,	9,		"b", "g", ftxui::Color::BlueLight, currentCurds);
-	Generator gen6("Fondue Fountains",	10000,	1.07,	1000,	9,		"n", "h", ftxui::Color::GreenLight, currentCurds);
+	Generator gen1("RATS",				10,		1.07,	2,		9,		"z", "a", ftxui::Color::White, currentCurds);
+	Generator gen2("MONGERS",			100,	1.07,	10,		9,		"x", "s", ftxui::Color::DarkOrange, currentCurds);
+	Generator gen3("DAIRY FARMS",		1000,	1.07,	100,	9,		"c", "d", ftxui::Color::Yellow, currentCurds);
+	Generator gen4("INDUSTRIAL PLANTS",	10000,	1.07,	1000,	9,		"v", "f", ftxui::Color::PaleTurquoise1, currentCurds);
+	Generator gen5("CHEESE CAVES",		10000,	1.07,	1000,	9,		"b", "g", ftxui::Color::BlueLight, currentCurds);
+	Generator gen6("FONDUE FOUNTAINS",	10000,	1.07,	1000,	9,		"n", "h", ftxui::Color::GreenLight, currentCurds);
 
-	//FTXUI setup, screen as persistent
-	ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
+	Accumulator curdAccum({}); //most vexing parse :( interpreted as function w/o curly braces
 
-	//click button functions
-	auto curdButton = ftxui::Button("click for a cheese curd", [&] { currentCurds += curdsPerClick; producedCurds += curdsPerClick; }, ftxui::ButtonOption::Animated());
-	auto clickUpgradeButton = ftxui::Button("Upgrade", [&] { 
+	//click button functions. Maybe move to class later
+	auto curdButton = ftxui::Button("CLICK for cheese curds", [&] { currentCurds += curdsPerClick; producedCurds += curdsPerClick; }, ftxui::ButtonOption::Animated());
+	auto clickUpgradeButton = ftxui::Button("UPGRADE", [&] { 
 		if (currentCurds >= clickUpgradeCost) {
 			currentCurds -= clickUpgradeCost;
 			clickUpgradeCount++;
 			curdsPerClick++;
 			clickUpgradeCost = clickUpgradeCost * (clickCostScalar * (clickUpgradeCount + 1));
 		}
-		});
+		}, ftxui::ButtonOption::Ascii());
+	auto accumulatorBuyButton = ftxui::Button("BUY", [&] { accumulatorPurchased = 1; curdAccum.Start(); }, ftxui::ButtonOption::Ascii());
+	auto accumulatorUpgradeButton = ftxui::Button("UPGRADE", [&] { curdAccum.Upgrade(); }, ftxui::ButtonOption::Ascii());
 	auto allButtons = ftxui::Container::Horizontal({
 		curdButton,
 		clickUpgradeButton,
@@ -99,7 +125,12 @@ int main()
 		gen4.getComponent(),
 		gen5.getComponent(),
 		gen6.getComponent(),
+		accumulatorBuyButton,
+		accumulatorUpgradeButton,
 		});
+
+	//FTXUI setup, screen as persistent
+	ftxui::ScreenInteractive screen = ftxui::ScreenInteractive::Fullscreen();
 
 	//display elements
 	ftxui::Component renderer = ftxui::Renderer(allButtons, [&] {
@@ -118,7 +149,7 @@ int main()
 					ftxui::text("Per Click") | ftxui::bold,
 					ftxui::vbox({
 						ftxui::text("curds produced: " + std::to_string(curdsPerClick)),
-						ftxui::text("Upgrade Cost" + std::to_string(clickUpgradeCost)),
+						ftxui::text("Upgrade Cost: " + std::to_string(clickUpgradeCost)),
 						clickUpgradeButton->Render(),
 					})
 				)
@@ -134,7 +165,10 @@ int main()
 			}),
 			ftxui::separator(),
 			ftxui::text("Accumulator Goes Here") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold,
-			ftxui::separator(),
+			ftxui::hbox({
+				accumulatorBuyButton->Render(),
+				accumulatorUpgradeButton->Render(),
+			}),
 			ftxui::text("press q to quit") | ftxui::color(ftxui::Color::Yellow) | ftxui::dim,
 			}) | ftxui::border;
 		});
@@ -157,13 +191,16 @@ int main()
 		curdsPerSecond = gen1.getCPS() + gen2.getCPS() + gen3.getCPS() + gen4.getCPS() + gen5.getCPS() + gen6.getCPS();
 		
 		auto now = std::chrono::steady_clock::now(); //finds time interval, used for calculating generated curds
+		if (accumulatorPurchased == 1) {
+			
+		}
 		double elapsedSeconds = std::chrono::duration<double>(now - lastTime).count();
 		lastTime = now;
 
 		currentCurds = currentCurds + (curdsPerSecond * elapsedSeconds);
 		producedCurds = producedCurds + (curdsPerSecond * elapsedSeconds);
 		displayCurds = currentCurds;
-		
+
 		screen.PostEvent(ftxui::Event::Custom); //push autonomous updates to screen
 		loop.RunOnce(); //non-blocking
 		
