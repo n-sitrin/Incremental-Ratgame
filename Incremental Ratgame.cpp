@@ -18,19 +18,52 @@ enum Message {
 	rocketBuy,
 };
 
+class MessageBoard {
+
+public:
+	Message current = intro;
+
+	std::vector<std::string> messageBank = {
+		"some say the moon is made of cheese",
+		"you’ve started enlisting rats to pilfer cheese on your behalf",
+		"with specialist training, your rats can now steal more effectively",
+		"you’ve begun staffing full-time cheese brokers",
+		"thanks to AI-augmented workflows, your cheese mongers can now buy and sell more efficiently",
+		"you’ve gone straight to the source, controlling the milk supply",
+		"by investing in sophisticated multi-milker technology, you can extract much more dairy product from your livestock",
+		"organic production can’t keep up, you’ve decided to start producing “cheese products” at scale",
+		"UPGRADE INDUSTRIAL PLANT MSG GOES HERE, something with nuclear fusion",
+		"in your relentless pursuit, you’ve discovered massive cheese deposits deep within the earth",
+		"you’ve paid off local politicians to approve your cheese fracking permits",
+		"ponce de Leon dreamt of finding the legendary Fountains of Cheese, now you’ve claimed them for yourself",
+		"your countless sacrifices to the divine cheese are paying off",
+		"you’ve left the world behind, to find out for yourself. Is the moon truly made of cheese?",
+	};
+
+	ftxui::Element displayMessage() const {
+		return ftxui::text(messageBank[current]);
+	}
+
+	void updateMessage(Message update) {
+		current = update;
+	}
+};
+
 class Generator {
 	std::string name, key, upgradeKey;
-	int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 1, upgradeThreshCurrent;
+	int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 1, upgradeThreshCurrent, upgradeCount = 0;
 	double costScalar, upgradeScalar = 1.0;
 	double& curds;
 	ftxui::Color windowColor;
 	ftxui::Component buyButton;
 	ftxui::Component upgradeButton;
+	Message buy, upgrade;
+	MessageBoard& board;
 
 public:
-	Generator(std::string n, int ic, double s, int p, int uc, std::string k, std::string uk, ftxui::Color cl, double& cRef)
+	Generator(std::string n, int ic, double s, int p, int uc, std::string k, std::string uk, ftxui::Color cl, double& cRef, Message bm, Message um, MessageBoard& mb)
 		: name(n), initialCost(ic), scaledCost(initialCost), costScalar(s), prodRate(p), upgradeCost(uc),
-		upgradeThreshCurrent(upgradeThreshBase), key(k), upgradeKey(uk), windowColor(cl), curds(cRef)
+		upgradeThreshCurrent(upgradeThreshBase), key(k), upgradeKey(uk), windowColor(cl), curds(cRef), buy(bm), upgrade(um), board(mb)
 	{
 		buyButton = ftxui::Button("BUY", [this] { tryPurchase(curds); }, ftxui::ButtonOption::Ascii());
 		upgradeButton = ftxui::Button("UPGRADE", [this] { tryUpgrade(curds); }, ftxui::ButtonOption::Ascii());
@@ -58,19 +91,27 @@ public:
 		double CPS = (count * prodRate) * upgradeScalar;
 		return CPS;
 	}
-	void tryPurchase(double& currentCurds) {
+
+	void tryPurchase(double& currentCurds) { 
 		if (currentCurds >= scaledCost) {
 			currentCurds -= scaledCost;
 			count++;
 			scaledCost = initialCost * (costScalar * (count + 1));
+			if (count == 1) {
+				board.updateMessage(buy);
+			}
 		}
 	}
 	void tryUpgrade(double& currentCurds) {
 		if (currentCurds >= upgradeCost && count >= upgradeThreshCurrent) {
 			currentCurds -= upgradeCost;
+			upgradeCount++;
 			upgradeScalar += 0.5; //needs tuning
 			upgradeCost = upgradeCost * 2; //needs tuning
 			upgradeThreshCurrent += upgradeThreshBase;
+			if (upgradeCount == 1) {
+				board.updateMessage(upgrade);
+			}
 		}
 	}
 };
@@ -148,39 +189,6 @@ public:
 	}
 };
 
-class MessageBoard {
-
-public:
-	//declare enum Messages
-
-	Message current = intro;
-
-	std::vector<std::string> messageBank = {
-		"some say the moon is made of cheese",
-		"you’ve started enlisting rats to pilfer cheese on your behalf",
-		"with specialist training, your rats can now steal more effectively",
-		"you’ve begun staffing full-time cheese brokers",
-		"thanks to AI-augmented workflows, your cheese mongers can now buy and sell more efficiently",
-		"you’ve gone straight to the source, controlling the milk supply",
-		"by investing in sophisticated multi-milker technology, you can extract much more dairy product from your livestock",
-		"organic production can’t keep up, you’ve decided to start producing “cheese products” at scale",
-		"UPGRADE INDUSTRIAL PLANT MSG GOES HERE, something with nuclear fusion",
-		"in your relentless pursuit, you’ve discovered massive cheese deposits deep within the earth",
-		"you’ve paid off local politicians to approve your cheese fracking permits",
-		"ponce de Leon dreamt of finding the legendary Fountains of Cheese, now you’ve claimed them for yourself",
-		"your countless sacrifices to the divine cheese are paying off",
-		"you’ve left the world behind, to find out for yourself. Is the moon truly made of cheese?",
-	};
-
-	ftxui::Element displayMessage() const {
-		return ftxui::text(messageBank[current]);
-	}
-	
-	void updateMessage(Message update) {
-		current = update;
-	}
-};
-
 int main()
 {
 	double currentCurds = 0, producedCurds = 0, clickCostScalar = 1.07;
@@ -188,18 +196,18 @@ int main()
 	int curdsPerClick = 1, clickUpgradeCount = 0;
 	bool running = 1;
 
+	MessageBoard msgBoard({});
+
 	//				name				cost	cScalar	CPS		uCost
-	Generator gen1("RATS",				10,		1.07,	2,		9,		"z", "a", ftxui::Color::White, currentCurds);
-	Generator gen2("MONGERS",			100,	1.07,	10,		9,		"x", "s", ftxui::Color::DarkOrange, currentCurds);
-	Generator gen3("DAIRY FARMS",		1000,	1.07,	100,	9,		"c", "d", ftxui::Color::Yellow, currentCurds);
-	Generator gen4("INDUSTRIAL PLANTS",	10000,	1.07,	1000,	9,		"v", "f", ftxui::Color::PaleTurquoise1, currentCurds);
-	Generator gen5("CHEESE CAVES",		10000,	1.07,	1000,	9,		"b", "g", ftxui::Color::BlueLight, currentCurds);
-	Generator gen6("FONDUE FOUNTAINS",	10000,	1.07,	1000,	9,		"n", "h", ftxui::Color::GreenLight, currentCurds);
+	Generator gen1("RATS",				10,		1.07,	2,		9,		"z", "a", ftxui::Color::White, currentCurds, ratBuy, ratUpgrade, msgBoard);
+	Generator gen2("MONGERS",			100,	1.07,	10,		9,		"x", "s", ftxui::Color::DarkOrange, currentCurds, mongerBuy, mongerUpgrade, msgBoard);
+	Generator gen3("DAIRY FARMS",		1000,	1.07,	100,	9,		"c", "d", ftxui::Color::Yellow, currentCurds, farmBuy, farmUpgrade, msgBoard);
+	Generator gen4("INDUSTRIAL PLANTS",	10000,	1.07,	1000,	9,		"v", "f", ftxui::Color::PaleTurquoise1, currentCurds, plantBuy, plantUpgrade, msgBoard);
+	Generator gen5("CHEESE CAVES",		10000,	1.07,	1000,	9,		"b", "g", ftxui::Color::BlueLight, currentCurds, caveBuy, caveUpgrade, msgBoard);
+	Generator gen6("FONDUE FOUNTAINS",	10000,	1.07,	1000,	9,		"n", "h", ftxui::Color::GreenLight, currentCurds, fountainBuy, fountainUpgrade, msgBoard);
 
 	auto now = std::chrono::steady_clock::now();  //finds time interval, used for calculating generated curds
 	Accumulator curdAccum(currentCurds, now);
-	
-	MessageBoard msgBoard({});
 
 	//click button functions. Maybe move to class later
 	auto curdButton = ftxui::Button("CLICK for cheese curds", [&] { currentCurds += curdsPerClick; producedCurds += curdsPerClick; }, ftxui::ButtonOption::Animated());
@@ -250,7 +258,7 @@ int main()
 			}),
 			ftxui::separator(),
 			ftxui::hbox({
-				gen1.displayInfo(), //maybe this could be a loop
+				gen1.displayInfo(),
 				gen2.displayInfo(),
 				gen3.displayInfo(),
 				gen4.displayInfo(),
@@ -264,6 +272,7 @@ int main()
 		});
 
 	//handle keyboard input
+	//the only keyboard input now is to quit... maybe unecessary?
 	ftxui::Component app = ftxui::CatchEvent(renderer, [&](ftxui::Event event) {
 		if (event == ftxui::Event::Character('q')) {
 			running = 0;
