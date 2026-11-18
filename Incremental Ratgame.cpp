@@ -6,6 +6,18 @@
 #include <chrono>
 #include <ftxui/ftxui.hpp>
 
+//used for message board
+enum Message {
+	intro,
+	ratBuy, ratUpgrade,
+	mongerBuy, mongerUpgrade,
+	farmBuy, farmUpgrade,
+	plantBuy, plantUpgrade,
+	caveBuy, caveUpgrade,
+	fountainBuy, fountainUpgrade,
+	rocketBuy,
+};
+
 class Generator {
 	std::string name, key, upgradeKey;
 	int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 1, upgradeThreshCurrent;
@@ -137,11 +149,12 @@ public:
 };
 
 class MessageBoard {
-	
 
 public:
 	//declare enum Messages
-	//std::vector message[0];
+
+	Message current = intro;
+
 	std::vector<std::string> messageBank = {
 		"some say the moon is made of cheese",
 		"you’ve started enlisting rats to pilfer cheese on your behalf",
@@ -151,7 +164,7 @@ public:
 		"you’ve gone straight to the source, controlling the milk supply",
 		"by investing in sophisticated multi-milker technology, you can extract much more dairy product from your livestock",
 		"organic production can’t keep up, you’ve decided to start producing “cheese products” at scale",
-		"UPGRADE INDUSTRIAL PLANT MSG GOES HERE",
+		"UPGRADE INDUSTRIAL PLANT MSG GOES HERE, something with nuclear fusion",
 		"in your relentless pursuit, you’ve discovered massive cheese deposits deep within the earth",
 		"you’ve paid off local politicians to approve your cheese fracking permits",
 		"ponce de Leon dreamt of finding the legendary Fountains of Cheese, now you’ve claimed them for yourself",
@@ -159,14 +172,12 @@ public:
 		"you’ve left the world behind, to find out for yourself. Is the moon truly made of cheese?",
 	};
 
-	//display msg board, called in renderer
 	ftxui::Element displayMessage() const {
-		return ftxui::text(messageBank[0]);
+		return ftxui::text(messageBank[current]);
 	}
 	
-	//update msg board text, based on array
-	void updateMessage(enum x) {
-		//set message vector to correspond with conditional where this is called
+	void updateMessage(Message update) {
+		current = update;
 	}
 };
 
@@ -188,7 +199,7 @@ int main()
 	auto now = std::chrono::steady_clock::now();  //finds time interval, used for calculating generated curds
 	Accumulator curdAccum(currentCurds, now);
 	
-	MessageBoard msgBord({});
+	MessageBoard msgBoard({});
 
 	//click button functions. Maybe move to class later
 	auto curdButton = ftxui::Button("CLICK for cheese curds", [&] { currentCurds += curdsPerClick; producedCurds += curdsPerClick; }, ftxui::ButtonOption::Animated());
@@ -218,7 +229,7 @@ int main()
 	//display elements
 	ftxui::Component renderer = ftxui::Renderer(allButtons, [&] {
 		return ftxui::vbox({
-			msgBord.displayMessage(),
+			msgBoard.displayMessage(),
 				ftxui::separator(),
 			ftxui::hbox({
 				ftxui::vbox({
@@ -281,7 +292,7 @@ int main()
 
 		screen.PostEvent(ftxui::Event::Custom); //push autonomous updates to screen
 		loop.RunOnce(); //non-blocking
-		
+
 		std::this_thread::sleep_for(std::chrono::milliseconds(16));	//60 "fps"
 	}
 }
