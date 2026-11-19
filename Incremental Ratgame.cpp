@@ -192,7 +192,7 @@ public:
 int main()
 {
 	double currentCurds = 0, producedCurds = 0, clickCostScalar = 1.07;
-	long displayCurds = 0, curdsPerSecond = 0, clickUpgradeCost = 10;
+	long displayCurds = 0, curdsPerSecond = 0, clickUpgradeCost = 10, rocketCost = 1000;
 	int curdsPerClick = 1, clickUpgradeCount = 0;
 	bool running = 1;
 
@@ -219,6 +219,7 @@ int main()
 			clickUpgradeCost = clickUpgradeCost * (clickCostScalar * (clickUpgradeCount + 1));
 		}
 		}, ftxui::ButtonOption::Ascii());
+	auto rocketButton = ftxui::Button("click to buy rocket", [&] { if (currentCurds >= rocketCost) { msgBoard.updateMessage(rocketBuy); }});
 	auto allButtons = ftxui::Container::Horizontal({ //component tree
 		curdButton,
 		clickUpgradeButton,
@@ -229,6 +230,7 @@ int main()
 		gen5.getComponent(),
 		gen6.getComponent(),
 		curdAccum.getComponent(),
+		rocketButton,
 		});
 
 	//FTXUI setup, screen as persistent
@@ -267,6 +269,10 @@ int main()
 			}),
 			ftxui::separator(),
 			curdAccum.displayInfo(),
+			ftxui::hbox({
+				ftxui::text("Rocket Cost: " + std::to_string(rocketCost)),
+				rocketButton->Render(),
+			}),
 			ftxui::text("press q to quit") | ftxui::color(ftxui::Color::Yellow) | ftxui::dim,
 			}) | ftxui::border;
 		});
