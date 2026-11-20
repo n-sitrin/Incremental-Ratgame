@@ -2,6 +2,7 @@
 
 #include <string>
 #include <vector>
+#include <functional>
 #include <thread>
 #include <chrono>
 #include <ftxui/ftxui.hpp>
@@ -49,28 +50,66 @@ public:
 	}
 };
 
+//define button visual behaviors
+class ShopButton {
+	bool hovered = 0;
+	std::function<bool()> canAfford; //callback, allows me to define the conditions dynamically. Compatible w/ each gen's cost members
+	ftxui::Component component;
+
+public:
+	ShopButton(std::string label, std::function<bool()> af, std::function<void()> click)
+		: canAfford(af)
+	{
+		ftxui::ButtonOption option;
+		option.transform = [this](const ftxui::EntryState& state) {
+			ftxui::Element e = ftxui::text(" " + state.label + " ");
+			if (!canAfford()) {
+				return e | ftxui::dim;
+			}
+			if (hovered) {
+				return e | ftxui::inverted;
+			}
+			return e;
+			};
+
+		auto button = ftxui::Button(label, click, option);
+
+		component = ftxui::Hoverable(button, &hovered);
+	}
+
+	ShopButton(const ShopButton&) = delete;
+	ShopButton& operator = (const ShopButton&) = delete;
+
+	ftxui::Component getComponent() const { return component; }
+	ftxui::Element Render() const { return component->Render(); }
+};
+
 class Generator {
 	std::string name, key, upgradeKey;
 	int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 1, upgradeThreshCurrent, upgradeCount = 0;
 	double costScalar, upgradeScalar = 1.0;
 	double& curds;
 	ftxui::Color windowColor;
-	ftxui::Component buyButton;
-	ftxui::Component upgradeButton;
 	Message buy, upgrade;
 	MessageBoard& board;
+	ShopButton buyButton;
+	ShopButton upgradeButton;
 
 public:
 	Generator(std::string n, int ic, double s, int p, int uc, std::string k, std::string uk, ftxui::Color cl, double& cRef, Message bm, Message um, MessageBoard& mb)
 		: name(n), initialCost(ic), scaledCost(initialCost), costScalar(s), prodRate(p), upgradeCost(uc),
-		upgradeThreshCurrent(upgradeThreshBase), key(k), upgradeKey(uk), windowColor(cl), curds(cRef), buy(bm), upgrade(um), board(mb)
-	{
-		buyButton = ftxui::Button("BUY", [this] { tryPurchase(curds); }, ftxui::ButtonOption::Ascii());
-		upgradeButton = ftxui::Button("UPGRADE", [this] { tryUpgrade(curds); }, ftxui::ButtonOption::Ascii());
+		upgradeThreshCurrent(upgradeThreshBase), key(k), upgradeKey(uk), windowColor(cl), curds(cRef), buy(bm), upgrade(um), board(mb),
+		buyButton("[ BUY] ", 
+			[this] { return curds >= scaledCost; },
+			[this] { tryPurchase(curds); }),
+		upgradeButton("[ UPGRADE ]", 
+			[this] { return (curds >= upgradeCost) && (count >= upgradeThreshCurrent);  },
+			[this] { tryUpgrade(curds); })
+		{
 	}
 
 	ftxui::Component getComponent() {
-		return ftxui::Container::Vertical({ buyButton, upgradeButton }); //group object's buttons for component tree
+		return ftxui::Container::Vertical({ buyButton.getComponent(), upgradeButton.getComponent()}); //group object's buttons for component tree
 	}
 
 	ftxui::Element displayInfo() const {
@@ -82,8 +121,8 @@ public:
 				ftxui::text("CPS each: " + std::to_string(prodRate)),
 				ftxui::text("Upgrd Cost: " + std::to_string(upgradeCost)),
 				ftxui::text("Upgrd Mult: x" + std::format("{:.1f}", upgradeScalar)),
-				buyButton->Render(),
-				upgradeButton->Render(),
+				buyButton.Render(),
+				upgradeButton.Render(),
 				})) | ftxui::color(windowColor);
 	}
 
