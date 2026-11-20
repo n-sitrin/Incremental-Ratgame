@@ -219,7 +219,7 @@ int main()
 			clickUpgradeCost = clickUpgradeCost * (clickCostScalar * (clickUpgradeCount + 1));
 		}
 		}, ftxui::ButtonOption::Ascii());
-	auto rocketButton = ftxui::Button("click to buy rocket", [&] { if (currentCurds >= rocketCost) { msgBoard.updateMessage(rocketBuy); }});
+	auto rocketButton = ftxui::Button("click to buy rocket", [&] { if (currentCurds >= rocketCost) { msgBoard.updateMessage(rocketBuy); }}, ftxui::ButtonOption::Ascii()) | ftxui::color(ftxui::Color::Blue);
 	auto allButtons = ftxui::Container::Horizontal({ //component tree
 		curdButton,
 		clickUpgradeButton,
@@ -270,7 +270,7 @@ int main()
 			ftxui::separator(),
 			curdAccum.displayInfo(),
 			ftxui::hbox({
-				ftxui::text("Rocket Cost: " + std::to_string(rocketCost)),
+				ftxui::text("Rocket Cost: " + std::to_string(rocketCost)) | ftxui::color(ftxui::Color::Blue),
 				rocketButton->Render(),
 			}),
 			ftxui::text("press q to quit") | ftxui::color(ftxui::Color::Yellow) | ftxui::dim,
