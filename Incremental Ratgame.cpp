@@ -53,7 +53,7 @@ public:
 //define button visual behaviors
 class ShopButton {
 	bool hovered = 0;
-	std::function<bool()> canAfford; //callback, allows me to define the conditions dynamically. Compatible w/ each gen's cost members
+	std::function<bool()> canAfford; //callback, allows me to define the conditions in the gen class
 	ftxui::Component component;
 
 public:
@@ -86,7 +86,8 @@ public:
 
 class Generator {
 	std::string name, key, upgradeKey;
-	int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 1, upgradeThreshCurrent, upgradeCount = 0;
+	int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 10, //TUNE
+		upgradeThreshCurrent, upgradeCount = 0;
 	double costScalar, upgradeScalar = 1.0;
 	double& curds;
 	ftxui::Color windowColor;
@@ -157,11 +158,11 @@ public:
 
 class Accumulator {
 	std::chrono::steady_clock::time_point timeStamp, now;
-	std::chrono::seconds thresh{ 10 }; //duration taken before granting curds
+	std::chrono::seconds thresh{ 120 }; //duration taken before granting curds
 	bool hasPurchased = 0;
 	int durationToGrant = 666; //seconds worth of generation given when thresh is reached
 	int upgradeCount = 0, upgradeLimit = 5; //needs tuning
-	double cost = 10, upgradeCost = 10;
+	double cost = 6000, upgradeCost = 25000;
 	double& curds;
 	ftxui::Component buyButton;
 	ftxui::Component upgradeButton;
@@ -189,7 +190,7 @@ public:
 
 	void tryUpgrade(double& currentCurds) {
 		if (upgradeCount < upgradeLimit && currentCurds >= upgradeCost) {
-			thresh -= std::chrono::seconds(5); //tune this
+			thresh -= std::chrono::seconds(15); //tune this
 			upgradeCount++;
 		}
 		//else (you've hit the limit) message board?
@@ -231,19 +232,19 @@ public:
 int main()
 {
 	double currentCurds = 0, producedCurds = 0, clickCostScalar = 1.07;
-	long displayCurds = 0, curdsPerSecond = 0, clickUpgradeCost = 10, rocketCost = 1000;
+	long displayCurds = 0, curdsPerSecond = 0, clickUpgradeCost = 10, rocketCost = 400000000; //TUNE
 	int curdsPerClick = 1, clickUpgradeCount = 0;
 	bool running = 1;
 
 	MessageBoard msgBoard({});
 
-	//				name				cost	cScalar	CPS		uCost
-	Generator gen1("RATS",				10,		1.07,	2,		9,		"z", "a", ftxui::Color::White, currentCurds, ratBuy, ratUpgrade, msgBoard);
-	Generator gen2("MONGERS",			100,	1.07,	10,		9,		"x", "s", ftxui::Color::DarkOrange, currentCurds, mongerBuy, mongerUpgrade, msgBoard);
-	Generator gen3("DAIRY FARMS",		1000,	1.07,	100,	9,		"c", "d", ftxui::Color::Yellow, currentCurds, farmBuy, farmUpgrade, msgBoard);
-	Generator gen4("INDUSTRIAL PLANTS",	10000,	1.07,	1000,	9,		"v", "f", ftxui::Color::PaleTurquoise1, currentCurds, plantBuy, plantUpgrade, msgBoard);
-	Generator gen5("CHEESE CAVES",		10000,	1.07,	1000,	9,		"b", "g", ftxui::Color::BlueLight, currentCurds, caveBuy, caveUpgrade, msgBoard);
-	Generator gen6("FONDUE FOUNTAINS",	10000,	1.07,	1000,	9,		"n", "h", ftxui::Color::GreenLight, currentCurds, fountainBuy, fountainUpgrade, msgBoard);
+	//				name				cost		cScalar	CPS		uCost
+	Generator gen1("RATS",				15,			1.07,	1,		250,			"z", "a", ftxui::Color::White, currentCurds, ratBuy, ratUpgrade, msgBoard);
+	Generator gen2("MONGERS",			150,		1.07,	5,		3000,			"x", "s", ftxui::Color::DarkOrange, currentCurds, mongerBuy, mongerUpgrade, msgBoard);
+	Generator gen3("DAIRY FARMS",		2500,		1.07,	30,		40000,			"c", "d", ftxui::Color::Yellow, currentCurds, farmBuy, farmUpgrade, msgBoard);
+	Generator gen4("INDUSTRIAL PLANTS",	40000,		1.07,	180,	600000,			"v", "f", ftxui::Color::PaleTurquoise1, currentCurds, plantBuy, plantUpgrade, msgBoard);
+	Generator gen5("CHEESE CAVES",		600000,		1.07,	1100,	8000000,		"b", "g", ftxui::Color::BlueLight, currentCurds, caveBuy, caveUpgrade, msgBoard);
+	Generator gen6("FONDUE FOUNTAINS",	9000000,	1.07,	6500,	120000000,		"n", "h", ftxui::Color::GreenLight, currentCurds, fountainBuy, fountainUpgrade, msgBoard);
 
 	auto now = std::chrono::steady_clock::now();  //finds time interval, used for calculating generated curds
 	Accumulator curdAccum(currentCurds, now);
