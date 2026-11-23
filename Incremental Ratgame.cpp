@@ -3,6 +3,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <cmath>
 #include <thread>
 #include <chrono>
 #include <ftxui/ftxui.hpp>
@@ -120,15 +121,15 @@ public:
 				ftxui::text("Count: " + std::to_string(count)),
 				ftxui::text("Cost: " + std::to_string(scaledCost)),
 				ftxui::text("CPS each: " + std::to_string(prodRate)),
-				ftxui::text("Upgrd Cost: " + std::to_string(upgradeCost)),
-				ftxui::text("Upgrd Mult: x" + std::format("{:.1f}", upgradeScalar)),
+				ftxui::text("UPG Cost: " + std::to_string(upgradeCost)),
+				ftxui::text("UPG Mult: x" + std::format("{:.1f}", upgradeScalar)),
 				buyButton.Render(),
 				upgradeButton.Render(),
 				})) | ftxui::color(windowColor);
 	}
 
 	double getCPS() const {
-		double CPS = (count * prodRate) * upgradeScalar;
+		double CPS = (count * prodRate) * upgradeScalar; //from MoIG
 		return CPS;
 	}
 
@@ -136,7 +137,7 @@ public:
 		if (currentCurds >= scaledCost) {
 			currentCurds -= scaledCost;
 			count++;
-			scaledCost = initialCost * (costScalar * (count + 1));
+			scaledCost = static_cast<int>(initialCost * std::pow(costScalar, (count))); //from MoIG
 			if (count == 1) {
 				board.updateMessage(buy);
 			}
@@ -146,8 +147,8 @@ public:
 		if (currentCurds >= upgradeCost && count >= upgradeThreshCurrent) {
 			currentCurds -= upgradeCost;
 			upgradeCount++;
-			upgradeScalar += 0.5; //needs tuning
-			upgradeCost = upgradeCost * 2; //needs tuning
+			upgradeScalar *= 2; //needs tuning
+			upgradeCost *= 2; //needs tuning
 			upgradeThreshCurrent += upgradeThreshBase;
 			if (upgradeCount == 1) {
 				board.updateMessage(upgrade);
@@ -157,20 +158,20 @@ public:
 };
 
 class Accumulator {
-	std::chrono::steady_clock::time_point timeStamp, now;
+	std::chrono::steady_clock::time_point timeStamp;
+	std::chrono::steady_clock::time_point& now;
 	std::chrono::seconds thresh{ 120 }; //duration taken before granting curds
 	bool hasPurchased = 0;
-	int durationToGrant = 666; //seconds worth of generation given when thresh is reached
+	int durationToGrant = 60; //seconds worth of generation given when thresh is reached
 	int upgradeCount = 0, upgradeLimit = 5; //needs tuning
 	double cost = 6000, upgradeCost = 25000;
 	double& curds;
 	ftxui::Component buyButton;
 	ftxui::Component upgradeButton;
-	
 
 public:
 	float accumProgress = 0.0;
-	Accumulator(double& cRef, std::chrono::steady_clock::time_point n)
+	Accumulator(double& cRef, std::chrono::steady_clock::time_point& n)
 		: curds(cRef), now(n) {
 		buyButton = ftxui::Button("BUY", [this] { tryPurchase(curds, now); }, ftxui::ButtonOption::Ascii());
 		upgradeButton = ftxui::Button("UPGRADE", [this] { tryUpgrade(curds); }, ftxui::ButtonOption::Ascii());
@@ -180,7 +181,7 @@ public:
 		return ftxui::Container::Vertical({ buyButton, upgradeButton }); //group object's buttons for component tree
 	}
 
-	void tryPurchase(double& currentCurds, std::chrono::steady_clock::time_point now) {
+	void tryPurchase(double& currentCurds, std::chrono::steady_clock::time_point& now) {
 		if (hasPurchased == 0 && currentCurds >= cost) {
 			hasPurchased = 1;
 			currentCurds -= cost;
@@ -190,6 +191,7 @@ public:
 
 	void tryUpgrade(double& currentCurds) {
 		if (upgradeCount < upgradeLimit && currentCurds >= upgradeCost) {
+			currentCurds -= upgradeCost;
 			thresh -= std::chrono::seconds(15); //tune this
 			upgradeCount++;
 		}
@@ -205,6 +207,7 @@ public:
 			}
 		}
 	}
+
 	ftxui::Element progressBar() const {
 		return ftxui::hbox({
 		ftxui::text("Progress: "),
