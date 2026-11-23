@@ -86,7 +86,7 @@ public:
 };
 
 class Generator {
-	std::string name, key, upgradeKey;
+	std::string name;
 	int count = 0, initialCost, scaledCost, prodRate, upgradeCost, upgradeThreshBase = 10, //TUNE
 		upgradeThreshCurrent, upgradeCount = 0;
 	double costScalar, upgradeScalar = 1.0;
@@ -98,9 +98,9 @@ class Generator {
 	ShopButton upgradeButton;
 
 public:
-	Generator(std::string n, int ic, double s, int p, int uc, std::string k, std::string uk, ftxui::Color cl, double& cRef, Message bm, Message um, MessageBoard& mb)
+	Generator(std::string n, int ic, double s, int p, int uc, ftxui::Color cl, double& cRef, Message bm, Message um, MessageBoard& mb)
 		: name(n), initialCost(ic), scaledCost(initialCost), costScalar(s), prodRate(p), upgradeCost(uc),
-		upgradeThreshCurrent(upgradeThreshBase), key(k), upgradeKey(uk), windowColor(cl), curds(cRef), buy(bm), upgrade(um), board(mb),
+		upgradeThreshCurrent(upgradeThreshBase), windowColor(cl), curds(cRef), buy(bm), upgrade(um), board(mb),
 		buyButton("[ BUY] ", 
 			[this] { return curds >= scaledCost; },
 			[this] { tryPurchase(curds); }),
@@ -147,8 +147,8 @@ public:
 		if (currentCurds >= upgradeCost && count >= upgradeThreshCurrent) {
 			currentCurds -= upgradeCost;
 			upgradeCount++;
-			upgradeScalar *= 2; //needs tuning
-			upgradeCost *= 2; //needs tuning
+			upgradeScalar *= 2; //TUNE
+			upgradeCost *= 2; //TUNE
 			upgradeThreshCurrent += upgradeThreshBase;
 			if (upgradeCount == 1) {
 				board.updateMessage(upgrade);
@@ -163,7 +163,7 @@ class Accumulator {
 	std::chrono::seconds thresh{ 120 }; //duration taken before granting curds
 	bool hasPurchased = 0;
 	int durationToGrant = 60; //seconds worth of generation given when thresh is reached
-	int upgradeCount = 0, upgradeLimit = 5; //needs tuning
+	int upgradeCount = 0, upgradeLimit = 5; //TUNE
 	double cost = 6000, upgradeCost = 25000;
 	double& curds;
 	ftxui::Component buyButton;
@@ -242,14 +242,14 @@ int main()
 	MessageBoard msgBoard({});
 
 	//				name				cost		cScalar	CPS		uCost
-	Generator gen1("RATS",				15,			1.07,	1,		250,			"z", "a", ftxui::Color::White, currentCurds, ratBuy, ratUpgrade, msgBoard);
-	Generator gen2("MONGERS",			150,		1.07,	5,		3000,			"x", "s", ftxui::Color::DarkOrange, currentCurds, mongerBuy, mongerUpgrade, msgBoard);
-	Generator gen3("DAIRY FARMS",		2500,		1.07,	30,		40000,			"c", "d", ftxui::Color::Yellow, currentCurds, farmBuy, farmUpgrade, msgBoard);
-	Generator gen4("INDUSTRIAL PLANTS",	40000,		1.07,	180,	600000,			"v", "f", ftxui::Color::PaleTurquoise1, currentCurds, plantBuy, plantUpgrade, msgBoard);
-	Generator gen5("CHEESE CAVES",		600000,		1.07,	1100,	8000000,		"b", "g", ftxui::Color::BlueLight, currentCurds, caveBuy, caveUpgrade, msgBoard);
-	Generator gen6("FONDUE FOUNTAINS",	9000000,	1.07,	6500,	120000000,		"n", "h", ftxui::Color::GreenLight, currentCurds, fountainBuy, fountainUpgrade, msgBoard);
+	Generator gen1("RATS",				15,			1.15,	1,		250,			ftxui::Color::White, currentCurds, ratBuy, ratUpgrade, msgBoard);
+	Generator gen2("MONGERS",			150,		1.15,	5,		3000,			ftxui::Color::DarkOrange, currentCurds, mongerBuy, mongerUpgrade, msgBoard);
+	Generator gen3("DAIRY FARMS",		2500,		1.15,	30,		40000,			ftxui::Color::Yellow, currentCurds, farmBuy, farmUpgrade, msgBoard);
+	Generator gen4("INDUSTRIAL PLANTS",	40000,		1.15,	180,	600000,			ftxui::Color::PaleTurquoise1, currentCurds, plantBuy, plantUpgrade, msgBoard);
+	Generator gen5("CHEESE CAVES",		600000,		1.15,	1100,	8000000,		ftxui::Color::BlueLight, currentCurds, caveBuy, caveUpgrade, msgBoard);
+	Generator gen6("FONDUE FOUNTAINS",	9000000,	1.15,	6500,	120000000,		ftxui::Color::GreenLight, currentCurds, fountainBuy, fountainUpgrade, msgBoard);
 
-	auto now = std::chrono::steady_clock::now();  //finds time interval, used for calculating generated curds
+	auto now = std::chrono::steady_clock::now();  //init, used for finding time intervals
 	Accumulator curdAccum(currentCurds, now);
 
 	//click button functions. Maybe move to class later
@@ -262,8 +262,14 @@ int main()
 			clickUpgradeCost = clickUpgradeCost * (clickCostScalar * (clickUpgradeCount + 1));
 		}
 		}, ftxui::ButtonOption::Ascii());
-	auto rocketButton = ftxui::Button("click to buy rocket", [&] { if (currentCurds >= rocketCost) { msgBoard.updateMessage(rocketBuy); }}, ftxui::ButtonOption::Ascii()) | ftxui::color(ftxui::Color::Blue);
-	auto allButtons = ftxui::Container::Horizontal({ //component tree
+	
+	auto rocketButton = ftxui::Button("click to buy rocket", [&] { 
+		if (currentCurds >= rocketCost) { 
+			msgBoard.updateMessage(rocketBuy); 
+		}
+		}, ftxui::ButtonOption::Ascii()) | ftxui::color(ftxui::Color::Blue);
+	
+	auto allButtons = ftxui::Container::Horizontal({ //component tree?
 		curdButton,
 		clickUpgradeButton,
 		gen1.getComponent(),
@@ -287,7 +293,7 @@ int main()
 			ftxui::hbox({
 				ftxui::vbox({
 					ftxui::text("Current Curds: " + std::to_string(displayCurds)) | ftxui::color(ftxui::Color::Yellow) | ftxui::bold,
-					ftxui::text("Produced Curds: " + std::to_string(producedCurds) + "\n") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold, //DEBUG hide in release version
+					ftxui::text("Produced Curds: " + std::to_string(producedCurds) + "\n") | ftxui::color(ftxui::Color::Yellow) | ftxui::bold, //DEBUG hide in release version, used for revealing
 					ftxui::text("Global CPS: " + std::to_string(curdsPerSecond)),
 				}),
 				ftxui::filler(),
@@ -338,7 +344,7 @@ int main()
 
 		curdsPerSecond = gen1.getCPS() + gen2.getCPS() + gen3.getCPS() + gen4.getCPS() + gen5.getCPS() + gen6.getCPS();
 		
-		now = std::chrono::steady_clock::now(); //initialization moved up (used for accum)
+		now = std::chrono::steady_clock::now(); //init moved up (used for accum)
 		curdAccum.Call(now, currentCurds, curdsPerSecond);
 
 		double elapsedSeconds = std::chrono::duration<double>(now - lastTime).count();
@@ -348,7 +354,7 @@ int main()
 		producedCurds = producedCurds + (curdsPerSecond * elapsedSeconds);
 		displayCurds = currentCurds;
 
-		screen.PostEvent(ftxui::Event::Custom); //push autonomous updates to screen
+		screen.PostEvent(ftxui::Event::Custom); //push autonomous (gen) updates to screen
 		loop.RunOnce(); //non-blocking
 
 		std::this_thread::sleep_for(std::chrono::milliseconds(16));	//60 "fps"
