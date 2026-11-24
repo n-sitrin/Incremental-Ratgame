@@ -101,7 +101,7 @@ public:
 	Generator(std::string n, int ic, double s, int p, int uc, ftxui::Color cl, double& cRef, Message bm, Message um, MessageBoard& mb)
 		: name(n), initialCost(ic), scaledCost(initialCost), costScalar(s), prodRate(p), upgradeCost(uc),
 		upgradeThreshCurrent(upgradeThreshBase), windowColor(cl), curds(cRef), buy(bm), upgrade(um), board(mb),
-		buyButton("[ BUY] ", 
+		buyButton("[ BUY ]", 
 			[this] { return curds >= scaledCost; },
 			[this] { tryPurchase(curds); }),
 		upgradeButton("[ UPGRADE ]", 
@@ -166,19 +166,23 @@ class Accumulator {
 	int upgradeCount = 0, upgradeLimit = 5; //TUNE
 	double cost = 6000, upgradeCost = 25000;
 	double& curds;
-	ftxui::Component buyButton;
-	ftxui::Component upgradeButton;
+	ShopButton buyButton;
+	ShopButton upgradeButton;
 
 public:
 	float accumProgress = 0.0;
 	Accumulator(double& cRef, std::chrono::steady_clock::time_point& n)
-		: curds(cRef), now(n) {
-		buyButton = ftxui::Button("BUY", [this] { tryPurchase(curds, now); }, ftxui::ButtonOption::Ascii());
-		upgradeButton = ftxui::Button("UPGRADE", [this] { tryUpgrade(curds); }, ftxui::ButtonOption::Ascii());
-	}
-
+		: curds(cRef), now(n),
+		buyButton("[ BUY ]",
+			[this] { return hasPurchased == 0 && curds >= cost;  },
+			[this] { tryPurchase(curds, now);  }),
+		upgradeButton("[ UPGRADE ]",
+			[this] { return upgradeCount < upgradeLimit && curds >= upgradeCost; },
+			[this] { tryUpgrade(curds); })
+	{}
+	
 	ftxui::Component getComponent() {
-		return ftxui::Container::Vertical({ buyButton, upgradeButton }); //group object's buttons for component tree
+		return ftxui::Container::Vertical({ buyButton.getComponent(), upgradeButton.getComponent()}); //group object's buttons for component tree
 	}
 
 	void tryPurchase(double& currentCurds, std::chrono::steady_clock::time_point& now) {
@@ -195,7 +199,7 @@ public:
 			thresh -= std::chrono::seconds(15); //TUNE
 			upgradeCount++;
 		}
-		//else (you've hit the limit) message board?
+		//else (you've hit the limit) message board? kinda covered by button dim now
 	}
 
 	void Call(std::chrono::steady_clock::time_point now, double& currentCurds, long& curdsPerSecond) {
@@ -223,8 +227,8 @@ public:
 				ftxui::hbox({
 					ftxui::text("Interval: " + std::format("{}", thresh)),
 					ftxui::text(" Curds Granted: x" + std::to_string(durationToGrant)),
-					buyButton->Render(),
-					upgradeButton->Render(),
+					buyButton.Render(),
+					upgradeButton.Render(),
 				}),
 				progressBar(),
 				})
@@ -253,25 +257,37 @@ int main()
 	Accumulator curdAccum(currentCurds, now);
 
 	//click button functions. Maybe move to class later
+	ShopButton clickUpgradeButton("[ UPGRADE ]",
+		[&] { return currentCurds >= clickUpgradeCost;  },
+		[&] { currentCurds -= clickUpgradeCost;
+				clickUpgradeCount++;
+				curdsPerClick++;
+				clickUpgradeCost = clickUpgradeCost * (clickCostScalar * (clickUpgradeCount + 1)); }
+	);
+	ShopButton buyRocket("[ BUY ]",
+		[&] { return currentCurds >= rocketCost; },
+		[&] { msgBoard.updateMessage(rocketBuy); }
+	);
+
 	auto curdButton = ftxui::Button("CLICK for cheese curds", [&] { currentCurds += curdsPerClick; producedCurds += curdsPerClick; }, ftxui::ButtonOption::Animated());
-	auto clickUpgradeButton = ftxui::Button("UPGRADE", [&] { 
+	/*auto clickUpgradeButton = ftxui::Button("UPGRADE", [&] { 
 		if (currentCurds >= clickUpgradeCost) {
 			currentCurds -= clickUpgradeCost;
 			clickUpgradeCount++;
 			curdsPerClick++;
 			clickUpgradeCost = clickUpgradeCost * (clickCostScalar * (clickUpgradeCount + 1));
 		}
-		}, ftxui::ButtonOption::Ascii());
+		}, ftxui::ButtonOption::Ascii());*/
 	
-	auto rocketButton = ftxui::Button("BUY", [&] { 
+	/*auto rocketButton = ftxui::Button("BUY", [&] { 
 		if (currentCurds >= rocketCost) { 
 			msgBoard.updateMessage(rocketBuy); 
 		}
-		}, ftxui::ButtonOption::Ascii()) | ftxui::color(ftxui::Color::Blue);
+		}, ftxui::ButtonOption::Ascii()) | ftxui::color(ftxui::Color::Blue);*/
 	
 	auto allButtons = ftxui::Container::Horizontal({ //component tree?
 		curdButton,
-		clickUpgradeButton,
+		clickUpgradeButton.getComponent(),
 		gen1.getComponent(),
 		gen2.getComponent(),
 		gen3.getComponent(),
@@ -279,7 +295,7 @@ int main()
 		gen5.getComponent(),
 		gen6.getComponent(),
 		curdAccum.getComponent(),
-		rocketButton,
+		buyRocket.getComponent(),
 		});
 
 	//FTXUI setup, screen as persistent
@@ -299,11 +315,11 @@ int main()
 				ftxui::filler(),
 				curdButton->Render(),
 				ftxui::window(
-					ftxui::text("Per Click") | ftxui::bold,
+					ftxui::text("PER CLICK") | ftxui::bold,
 					ftxui::vbox({
-						ftxui::text("curds produced: " + std::to_string(curdsPerClick)),
+						ftxui::text("Curds Produced: " + std::to_string(curdsPerClick)),
 						ftxui::text("Upgrade Cost: " + std::to_string(clickUpgradeCost)),
-						clickUpgradeButton->Render(),
+						clickUpgradeButton.Render(),
 					})
 				)
 			}),
@@ -323,7 +339,7 @@ int main()
 				ftxui::vbox({
 					ftxui::text("To the moon"),
 					ftxui::text("Cost: " + std::to_string(rocketCost)),
-					rocketButton->Render(),
+					buyRocket.Render(),
 				}) 
 			) | ftxui::color(ftxui::Color::Blue),
 			
