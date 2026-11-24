@@ -192,7 +192,7 @@ public:
 	void tryUpgrade(double& currentCurds) {
 		if (upgradeCount < upgradeLimit && currentCurds >= upgradeCost) {
 			currentCurds -= upgradeCost;
-			thresh -= std::chrono::seconds(15); //tune this
+			thresh -= std::chrono::seconds(15); //TUNE
 			upgradeCount++;
 		}
 		//else (you've hit the limit) message board?
@@ -263,7 +263,7 @@ int main()
 		}
 		}, ftxui::ButtonOption::Ascii());
 	
-	auto rocketButton = ftxui::Button("click to buy rocket", [&] { 
+	auto rocketButton = ftxui::Button("BUY", [&] { 
 		if (currentCurds >= rocketCost) { 
 			msgBoard.updateMessage(rocketBuy); 
 		}
@@ -318,10 +318,15 @@ int main()
 			}),
 			ftxui::separator(),
 			curdAccum.displayInfo(),
-			ftxui::hbox({
-				ftxui::text("Rocket Cost: " + std::to_string(rocketCost)) | ftxui::color(ftxui::Color::Blue),
-				rocketButton->Render(),
-			}),
+			ftxui::window(
+				ftxui::text("ROCKET") | ftxui::bold,
+				ftxui::vbox({
+					ftxui::text("To the moon"),
+					ftxui::text("Cost: " + std::to_string(rocketCost)),
+					rocketButton->Render(),
+				}) 
+			) | ftxui::color(ftxui::Color::Blue),
+			
 			ftxui::text("press q to quit") | ftxui::color(ftxui::Color::Yellow) | ftxui::dim,
 			}) | ftxui::border;
 		});
